@@ -12,12 +12,15 @@ import pymysql
 import pymssql
 from sqlalchemy import create_engine
 import os
+import requests
+from bs4 import BeautifulSoup
 
 
 #读取数据库
 #初始化数据库
 # db_info = {'user': 'root', 'password': 'Peng%Mai_zhf@2014','host': '121.199.15.106','port': 3306,'database': 'Finance'}
 # db_info = {'user': 'sa', 'password': 'Talmd13925549389','host': '192.168.1.12','port': 1433,'database': 'TALMD'}
+#%%
 db_info = {'user': 'root', 'password': 'Hdjld^5811%','host': '122.51.235.140','port': 3306,'database': 'Finance'}
 engine = create_engine('mysql+pymysql://%(user)s:%(password)s@%(host)s:%(port)d/%(database)s?charset=utf8' % db_info, encoding='utf8',connect_args={'charset':'utf8'})
 
@@ -45,20 +48,6 @@ ts.set_token('632210e8afbd5a1fc1634b019b27df3866dcb8ce7035d7a9d2e39117')
 pro = ts.pro_api()
 
 #%%
-def get_fina(StockList,start_date,end_date,filename):
-#创建空白dataframe
-    fina=pro.fina_indicator(ts_code="000000")
-#日期的格式为"20190631"
-    #调取数据
-    for i in range(len(StockList)):
-        df=pro.fina_indicator(ts_code=StockList[i],start_date=start_date,end_date=end_date)
-        fina=fina.append(df)
-    #写入excel
-    fina.to_excel(filename)
-    #写入mysql
-    pd.io.sql.to_sql(fina,"Indicators",con=engine, index=False, if_exists='append')
-    return fina
-
 #调取月线数据 
 def get_monthly(StockList,start_date,end_date,filename):
     #filename为存储路径和文件名，如："X:/02专题分析/上市公司/上市公司月线.xlsx"
@@ -84,7 +73,9 @@ def get_daily(StockList,start_date,end_date,filename):
     #写入mysql
     #pd.io.sql.to_sql(pe,"Daily",con=engine, index=False, if_exists='append')
     return pe
-#%%
+
+
+#%%  三大报表
 #调取利润表
 def get_income(StockList,start_date,end_date,filename):
     income=pro.income(ts_code="000000")
@@ -98,7 +89,7 @@ def get_income(StockList,start_date,end_date,filename):
     #写入mysql
     # pd.io.sql.to_sql(income,"Income",con=engine, index=False, if_exists='append')
     return income
-#%%
+
 #调取资产负债表
 def get_balancesheet(StockList,start_date,end_date,filename):
     balancesheet=pro.balancesheet(ts_code="000000")
@@ -112,7 +103,7 @@ def get_balancesheet(StockList,start_date,end_date,filename):
     #写入mysql
     #pd.io.sql.to_sql(balancesheet,"BalanceSheet",con=engine, index=False, if_exists='append')
     return balancesheet
-#%%
+
 #调取现金流量表
 def get_cashflow(StockList,start_date,end_date,filename):
     cashflow=pro.cashflow(ts_code="000000")
@@ -127,6 +118,21 @@ def get_cashflow(StockList,start_date,end_date,filename):
     #pd.io.sql.to_sql(cashflow,"CashFlow",con=engine, index=False, if_exists='append')
     return cashflow
 
+
+# %% 调取主营业务
+def get_main(StockList,start_date,end_date,filename,type):
+    mainbz=pro.fina_mainbz(ts_code="000000")
+    mbf="ts_code,end_date,bz_item,bz_sales,bz_profit,bz_cost,curr_type,update_flag"
+    #调取数据
+    for i in range(len(StockList)):
+        ic=pro.fina_mainbz(ts_code=StockList[i],start_date=start_date,end_date=end_date,fields=mbf,type=type)
+        mainbz=mainbz.append(ic)
+    #写入excel
+    mainbz.to_excel(filename)
+    #写入mysql
+    #pd.io.sql.to_sql(cashflow,"CashFlow",con=engine, index=False, if_exists='append')
+    return mainbz
+
 def report(FileName):
     # "X:/02专题分析/上市公司/上市公司业绩报告.xlsx"
     report=ts.get_report_data(2015,4)
@@ -137,6 +143,22 @@ def report(FileName):
             report=report.append(df)
     report.to_excel(FileName)
     return report
+
+
+#%%  财务指标
+def get_fina(StockList,start_date,end_date,filename):
+#创建空白dataframe
+    fina=pro.fina_indicator(ts_code="000000")
+#日期的格式为"20190631"
+    #调取数据
+    for i in range(len(StockList)):
+        df=pro.fina_indicator(ts_code=StockList[i],start_date=start_date,end_date=end_date)
+        fina=fina.append(df)
+    #写入excel
+    fina.to_excel(filename)
+    #写入mysql
+    pd.io.sql.to_sql(fina,"Indicators",con=engine, index=False, if_exists='append')
+    return fina
 
 #盈利能力            
 def profit(filename):
@@ -198,17 +220,66 @@ def cashflow(filename):
     d.to_excel(filename)
     return d
 
-# %% 调取主营业务
-def get_main(StockList,start_date,end_date,filename,type):
-    mainbz=pro.fina_mainbz(ts_code="000000")
-    mbf="ts_code,end_date,bz_item,bz_sales,bz_profit,bz_cost,curr_type,update_flag"
-    #调取数据
+
+# %%  爬取新浪财经的各公司研报，取前10页
+def research_report(StockList):
+    report=pd.DataFrame()
     for i in range(len(StockList)):
-        ic=pro.fina_mainbz(ts_code=StockList[i],start_date=start_date,end_date=end_date,fields=mbf,type=type)
-        mainbz=mainbz.append(ic)
-    #写入excel
-    mainbz.to_excel(filename)
-    #写入mysql
-    #pd.io.sql.to_sql(cashflow,"CashFlow",con=engine, index=False, if_exists='append')
-    return mainbz
+        try:
+            PreUrl="http://stock.finance.sina.com.cn/stock/go.php/vReport_List/kind/search/index.phtml?t1=2&symbol="
+            StockCode=StockList[i][0:6]
+            r=pd.DataFrame()
+            for j in range(10):  # 页数
+                try:
+                    res = requests.get(PreUrl+StockCode+"&p="+str(j)) #模拟get请求获取链接返回的内容
+                    # res.encoding = 'utf-8'#设置编码格式为utf-8
+                    soup = BeautifulSoup(res.text, 'html.parser')#前面已经介绍将html文档格式化为一个树形结构，每个节点都是一个对python对象，方便获取节点内容        
+        
+                    table=soup.select(".main")[0].find_all("table")[0] # 解析为上下两个表，上表为研报数据，下表为页码
+                    trList=table.find_all("tr")  # 解析为每行记录的列表
+
+                    href=[]
+                    title=[]
+                    date=[]
+                    company=[]
+                    author=[]
+
+                    for k in range(2,len(trList)):  #前两行为表头
+                        tr=trList[k]
+                        href.append(tr.find("a")["href"])
+                        title.append(tr.find("a")["title"])
+                        tdList=tr.find_all("td")
+                        # 第一个td是行号，
+                        # 第二个td是文章标题和链接，
+                        # 第三个td是类型，这里都是公司
+                        # 第四个td是日期
+                        # 第五个td是本页链接及研报公司名称
+                        # 第六个td是作者
+                        date.append(tdList[3].get_text())
+                        company.append(tdList[4].find("span").get_text())
+                        author.append(tdList[5].find("span").get_text())
+
+
+                    rp=pd.DataFrame({"href":href,"title":title,"date":date,"company":company,"author":author})
+                    rp["Stock"]=StockList[i]
+                    r=r.append(rp)
+                except:
+                    pass
+            report=report.append(r)
+        except:
+            pass
+    return report 
+
+
+
+# %%
+report
+# %%
+rep=research_report(StockList)
+# %%
+rep.shape
+# %%
+rep.tail()
+# %%
+pd.io.sql.to_sql(rep,"Reports",con=engine, index=False, if_exists='replace')
 # %%
