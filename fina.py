@@ -21,8 +21,6 @@ from bs4 import BeautifulSoup
 # db_info = {'user': 'root', 'password': 'Peng%Mai_zhf@2014','host': '121.199.15.106','port': 3306,'database': 'Finance'}
 # db_info = {'user': 'sa', 'password': 'Talmd13925549389','host': '192.168.1.12','port': 1433,'database': 'TALMD'}
 #%%
-db_info = {'user': 'root', 'password': 'Hdjld^5811%','host': '122.51.235.140','port': 3306,'database': 'Finance'}
-engine = create_engine('mysql+pymysql://%(user)s:%(password)s@%(host)s:%(port)d/%(database)s?charset=utf8' % db_info, encoding='utf8',connect_args={'charset':'utf8'})
 
 #上市公司股票代码清单
 # List=["300668.SZ","300749.SZ","603898.SH","603180.SH","603833.SH","002853.SZ","300616.SZ","002572.SZ","603326.SH","603801.SH","002083.SZ","002327.SZ","002293.SZ","002397.SZ","600337.SH","603818.SH","603389.SH","600978.SH","603816.SH","603313.SH","603008.SH","002489.SZ","603661.SH","603600.SH","603709.SH","000910.SH","002271.SZ","603208.SH","603737.SH","002043.SZ","603515.SH","000541.SZ","002918.SZ","002631.SZ","002718.SZ","002798.SZ","002084.SZ","603385.SH","002722.SZ","300089.SZ","000663.SZ","603038.SH","002818.SZ","601828.SH","002713.SZ","002081.SZ","603030.SH","002482.SZ","601886.SH"
